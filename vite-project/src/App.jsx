@@ -1,5 +1,5 @@
 import "./App.css";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   ChartContainer,
   ChartTooltip,
@@ -7,24 +7,46 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "./components/ui/components/ui/chart.jsx";
-
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
+import API_DATA from "./components/ui/components/ui/dummy.json";
 
 function App() {
-  const chartData = [
-    { month: "January", overtime: 186 },
-    { month: "February", overtime: 200 },
-    { month: "March", overtime: 150 },
-    { month: "April", overtime: 180 },
-    { month: "May", overtime: 210 },
-    { month: "June", overtime: 220 },
-    { month: "July", overtime: 230 },
-    { month: "August", overtime: 240 },
-    { month: "September", overtime: 250 },
-    { month: "October", overtime: 260 },
-    { month: "November", overtime: 270 },
-    { month: "December", overtime: 280 },
-  ];
+  const [chartData, setChartData] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("http://localhost:3001/api/toggle");
+
+        const data = await response.json();
+
+        const overtimeData = data.reduce((acc, entry) => {
+          entry.time_entries.forEach(({ start, stop }) => {
+            if (!start || !stop) return;
+
+            const startDate = new Date(start);
+            const stopDate = new Date(stop);
+            const month = startDate.toLocaleString("en-US", { month: "long" });
+            const overtime = (stopDate - startDate) / 3600000;
+
+            acc[month] = (acc[month] || 0) + overtime;
+          });
+          return acc;
+        }, {});
+
+        const formattedData = Object.keys(overtimeData).map((month) => ({
+          month,
+          overtime: overtimeData[month],
+        }));
+
+        setChartData(formattedData);
+      } catch (error) {
+        console.error(error.message);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const chartConfig = {
     overtime: {
@@ -35,7 +57,7 @@ function App() {
 
   return (
     <div className="flex justify-center items-center h-screen">
-      <ChartContainer config={chartConfig} className="min-h-[200px] h-60 w-3xl">
+      <ChartContainer config={chartConfig} className="min-h-[200px] h-50 w-1xl">
         <BarChart accessibilityLayer data={chartData}>
           <CartesianGrid vertical={false} />
           <XAxis

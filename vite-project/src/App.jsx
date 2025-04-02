@@ -1,77 +1,76 @@
 import "./App.css";
+
+import CoolButton from "./Button.jsx";
+
 import React, { useState, useEffect } from "react";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "./components/ui/components/ui/chart.jsx";
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
-import API_DATA from "./components/ui/components/ui/dummy.json";
+
+import FirstChart from "./FirstChart.jsx";
 
 function App() {
   const [chartData, setChartData] = useState([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch("http://localhost:3001/api/toggle");
-
-        const data = await response.json();
-
-        const overtimeData = data.reduce((acc, entry) => {
-          entry.time_entries.forEach(({ start, stop }) => {
-            if (!start || !stop) return;
-
-            const startDate = new Date(start);
-            const stopDate = new Date(stop);
-            const month = startDate.toLocaleString("en-US", { month: "long" });
-            const overtime = (stopDate - startDate) / 3600000;
-
-            acc[month] = (acc[month] || 0) + overtime;
-          });
-          return acc;
-        }, {});
-
-        const formattedData = Object.keys(overtimeData).map((month) => ({
-          month,
-          overtime: overtimeData[month],
-        }));
-
-        setChartData(formattedData);
-      } catch (error) {
-        console.error(error.message);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("http://localhost:3001/api/toggle");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
+      const data = await response.json();
 
+      const overtimeData = data.reduce((acc, entry) => {
+        const timeEntries = entry.time_entries;
+
+        const existingEntries = acc[entry.user_id];
+
+        if (!existingEntries) {
+          acc[entry.user_id] = [...timeEntries];
+        } else {
+          acc[entry.user_id] = [...existingEntries, ...timeEntries];
+        }
+
+        return acc;
+      }, {});
+
+      setChartData(overtimeData);
+      setLoading(false);
+    } catch (error) {
+      setError(error.message);
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
     fetchData();
   }, []);
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
-  const chartConfig = {
-    overtime: {
-      label: "Overtime",
-      color: "#2563eb",
-    },
-  };
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <ChartContainer config={chartConfig} className="min-h-[200px] h-50 w-1xl">
-        <BarChart accessibilityLayer data={chartData}>
-          <CartesianGrid vertical={false} />
-          <XAxis
-            dataKey="month"
-            tickLine={false}
-            tickMargin={10}
-            axisLine={false}
-            tickFormatter={(value) => value.slice(0, 3)}
-          />
-          <ChartTooltip content={<ChartTooltipContent />} />
-          <ChartLegend content={<ChartLegendContent />} />
-          <Bar dataKey="overtime" fill="var(--color-overtime)" radius={6} />
-        </BarChart>
-      </ChartContainer>
+    <div className="flex flex-col space-y-40 justify-center items-center">
+      <div className="flex flex-row justify-center space-x-5 items-center ">
+        <FirstChart
+          chartData={chartData["11418541"]}
+          monthlyWorkingHours={32}
+          chartName={"Mostafa"}
+          chartColor={"#2563eb"}
+        />
+      </div>
+      <CoolButton onClick={fetchData} />
+      <div className="flex flex-row justify-center space-x-5 items-center ">
+        <FirstChart
+          chartData={chartData["11841329"]}
+          monthlyWorkingHours={8}
+          chartName={"Sönke"}
+          chartColor={"#95AD61"}
+        />
+      </div>
     </div>
   );
 }

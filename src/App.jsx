@@ -6,7 +6,7 @@ import React, { useState, useEffect } from "react";
 
 import FirstChart from "./FirstChart.jsx";
 const apiKey = import.meta.env.VITE_SERVER_HOST;
-
+console.log(apiKey);
 function App() {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);

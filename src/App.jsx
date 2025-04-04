@@ -16,6 +16,8 @@ function App() {
     setError(null);
     try {
       const response = await fetch(apiKey);
+
+      console.log(apiKey);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

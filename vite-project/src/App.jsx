@@ -5,6 +5,7 @@ import CoolButton from "./Button.jsx";
 import React, { useState, useEffect } from "react";
 
 import FirstChart from "./FirstChart.jsx";
+const apiKey = import.meta.env.VITE_SERVER_HOST;
 
 function App() {
   const [chartData, setChartData] = useState([]);
@@ -14,7 +15,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://localhost:3001/api/toggle");
+      const response = await fetch(apiKey);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

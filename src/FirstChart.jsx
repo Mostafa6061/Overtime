@@ -16,9 +16,17 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-
+import { hamburgHolidays } from "./holidays.js";
 import TotalDifference from "./TotalDifference.jsx";
-function FirstChart({ chartData, monthlyWorkingHours, chartName, chartColor }) {
+
+function FirstChart({
+  chartData,
+  monthlyWorkingHours,
+  chartName,
+  chartColor,
+  holidayData,
+}) {
+  console.log(holidayData);
   const processChartData = () => {
     if (!Array.isArray(chartData)) return [];
 
@@ -39,23 +47,63 @@ function FirstChart({ chartData, monthlyWorkingHours, chartName, chartColor }) {
       const diffHours = (stopDate - startDate) / (1000 * 60 * 60);
       const daysInMonth = daysInMonths[entryMonth];
 
+      let vacationDaysInMonth = 0;
+      if (holidayData && Array.isArray(holidayData)) {
+        holidayData.forEach((vacation) => {
+          const vacationStart = new Date(vacation.start_date);
+          const vacationEnd = new Date(vacation.end_date);
+
+          // Check if vacation overlaps with current month
+          if (
+            (vacationStart.getFullYear() === entryYear &&
+              vacationStart.getMonth() === entryMonth) ||
+            (vacationEnd.getFullYear() === entryYear &&
+              vacationEnd.getMonth() === entryMonth)
+          ) {
+            // Calculate the portion of vacation in this month
+            let monthVacationDays = 0;
+            const currentDate = new Date(vacationStart);
+
+            while (currentDate <= vacationEnd) {
+              const dateString = currentDate.toISOString().split("T")[0];
+              if (
+                currentDate.getFullYear() === entryYear &&
+                currentDate.getMonth() === entryMonth &&
+                !hamburgHolidays.includes(dateString) &&
+                currentDate.getDay() !== 0 &&
+                currentDate.getDay() !== 6
+              ) {
+                monthVacationDays++;
+              }
+              currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            vacationDaysInMonth += monthVacationDays;
+          }
+        });
+      }
+
       const isFullMonthCompleted =
         entryYear < currentYear ||
         (entryYear === currentYear &&
           (entryMonth < currentMonth ||
             (entryMonth === currentMonth && currentDay === daysInMonth)));
 
+      const adjustedDaysInMonth = daysInMonth - vacationDaysInMonth;
       const expectedHours = isFullMonthCompleted
-        ? monthlyWorkingHours
-        : (monthlyWorkingHours / daysInMonth) * currentDay;
+        ? (monthlyWorkingHours / daysInMonth) * adjustedDaysInMonth
+        : (monthlyWorkingHours / daysInMonth) *
+          Math.min(currentDay, adjustedDaysInMonth);
 
       if (!acc[month]) {
         acc[month] = {
           month,
           difference: diffHours - expectedHours,
+          vacationDays: vacationDaysInMonth,
         };
       } else {
         acc[month].difference += diffHours;
+        acc[month].vacationDays = vacationDaysInMonth;
       }
 
       return acc;
@@ -81,7 +129,7 @@ function FirstChart({ chartData, monthlyWorkingHours, chartName, chartColor }) {
   };
 
   const processedData = processChartData();
-  console.log(processedData);
+  // console.log(processedData);
 
   const chartConfig = {
     difference: {
